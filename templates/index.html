@@ -1,126 +1,179 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>GeM Document Scraper</title>
-    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="/static/style.css?v=3">
 </head>
 <body>
 <div class="container">
-    <h1>GeM Document Scraper</h1>
+
+    <header class="header">
+        <h1>GeM Document Scraper</h1>
+        <p class="subtitle">Government e-Marketplace contract downloader</p>
+    </header>
 
     <div class="card">
-        <label>Category</label>
-        <input id="category" list="catlist" placeholder="Type to search...">
-        <datalist id="catlist"></datalist>
-        <small id="catstatus">Loading categories from GeM...</small>
+        <div class="field">
+            <label for="category">Category</label>
+            <input id="category" list="catlist"
+                   placeholder="Start typing — e.g. label, laptop, printer"
+                   autocomplete="off">
+            <datalist id="catlist"></datalist>
+            <small id="catstatus">Loading categories from GeM…</small>
+        </div>
 
-        <label>From date (DD-MM-YYYY)</label>
-        <input id="from_date" value="01-09-2026">
+        <div class="row">
+            <div class="field">
+                <label for="from_date">From date</label>
+                <input id="from_date" type="date" value="2026-09-01">
+            </div>
+            <div class="field">
+                <label for="to_date">To date</label>
+                <input id="to_date" type="date" value="2026-09-05">
+            </div>
+        </div>
 
-        <label>To date (DD-MM-YYYY)</label>
-        <input id="to_date" value="05-09-2026">
-
-        <button id="runBtn">Run Scraper</button>
-        <div id="runstatus"></div>
+        <button id="runBtn" class="btn-primary">
+            <span class="btn-icon">▶</span> Run Scraper
+        </button>
+        <div id="runstatus" class="runstatus"></div>
     </div>
 
     <div class="card">
-        <h3>Progress</h3>
-        <div id="progress">0 / 0</div>
-        <pre id="log"></pre>
+        <div class="card-header">
+            <h3>Progress</h3>
+            <span id="progress" class="badge">0 / 0</span>
+        </div>
+        <pre id="log" class="log">Waiting to start…</pre>
     </div>
 
     <div class="card">
-        <h3>Downloaded Files</h3>
-        <ul id="files"></ul>
-        <button id="refreshFiles">Refresh</button>
+        <div class="card-header">
+            <h3>Downloaded Files</h3>
+            <button id="refreshFiles" class="btn-ghost">Refresh</button>
+        </div>
+        <ul id="files" class="file-list"></ul>
     </div>
+
 </div>
 
 <script>
+function isoToDmy(iso) {
+    const [y, m, d] = iso.split("-");
+    return d + "-" + m + "-" + y;
+}
+
 async function loadCategories() {
-    const res = await fetch('/categories');
-    const data = await res.json();
-    const list = document.getElementById('catlist');
-    list.innerHTML = '';
-    if (Array.isArray(data)) {
-        data.forEach(c => {
-            const opt = document.createElement('option');
-            opt.value = c;
-            list.appendChild(opt);
-        });
-        document.getElementById('catstatus').textContent =
-            `${data.length} categories loaded. Type to search.`;
-    } else {
-        document.getElementById('catstatus').textContent =
-            'Could not load categories: ' + (data.error || 'unknown error');
+    const list = document.getElementById("catlist");
+    const status = document.getElementById("catstatus");
+    status.textContent = "Loading categories from GeM…";
+    try {
+        const res = await fetch("/categories");
+        const data = await res.json();
+        list.innerHTML = "";
+        if (Array.isArray(data) && data.length > 0) {
+            data.forEach(function (c) {
+                const opt = document.createElement("option");
+                opt.value = c;
+                list.appendChild(opt);
+            });
+            status.textContent = data.length + " categories ready. Type to filter.";
+        } else {
+            status.textContent = "Could not load categories: " +
+                (data.error || "unknown error");
+        }
+    } catch (e) {
+        status.textContent = "Failed to reach server: " + e.message;
     }
 }
 
 async function startScraper() {
-    const category = document.getElementById('category').value.trim();
-    const from_date = document.getElementById('from_date').value.trim();
-    const to_date = document.getElementById('to_date').value.trim();
-    if (!category || !from_date || !to_date) {
-        alert('Please fill all fields');
-        return;
-    }
-    const res = await fetch('/start', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({category, from_date, to_date})
+    const category = document.getElementById("category").value.trim();
+    const fromIso = document.getElementById("from_date").value;
+    const toIso = document.getElementById("to_date").value;
+
+    if (!category) { alert("Please type or select a category"); return; }
+    if (!fromIso || !toIso) { alert("Please pick both dates"); return; }
+
+    const from_date = isoToDmy(fromIso);
+    const to_date = isoToDmy(toIso);
+
+    const btn = document.getElementById("runBtn");
+    btn.disabled = true;
+    document.getElementById("runstatus").textContent = "Starting…";
+    document.getElementById("runstatus").className = "runstatus";
+
+    const res = await fetch("/start", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({category: category, from_date: from_date, to_date: to_date})
     });
     const data = await res.json();
     if (data.error) {
         alert(data.error);
+        btn.disabled = false;
+        document.getElementById("runstatus").textContent = "";
     } else {
-        document.getElementById('runstatus').textContent = 'Running...';
+        document.getElementById("runstatus").textContent = "Running…";
         pollStatus();
     }
 }
 
 async function pollStatus() {
-    const res = await fetch('/status');
+    const res = await fetch("/status");
     const s = await res.json();
-    document.getElementById('log').textContent = s.log.join('\n');
-    document.getElementById('log').scrollTop = document.getElementById('log').scrollHeight;
-    document.getElementById('progress').textContent =
-        `${s.downloaded} / ${s.total}`;
+    const logBox = document.getElementById("log");
+    logBox.textContent = s.log.length ? s.log.join("\n") : "Waiting for first step…";
+    logBox.scrollTop = logBox.scrollHeight;
+    document.getElementById("progress").textContent = s.downloaded + " / " + s.total;
 
+    const statusEl = document.getElementById("runstatus");
     if (s.error) {
-        document.getElementById('runstatus').textContent = 'Error: ' + s.error;
+        statusEl.textContent = "Error: " + s.error;
+        statusEl.className = "runstatus error";
     } else if (s.done) {
-        document.getElementById('runstatus').textContent = 'Finished!';
+        statusEl.textContent = "Finished!";
+        statusEl.className = "runstatus success";
+    } else if (s.running) {
+        statusEl.textContent = "Running…";
+        statusEl.className = "runstatus";
     }
 
     if (s.running) {
         setTimeout(pollStatus, 1500);
     } else {
+        document.getElementById("runBtn").disabled = false;
         loadFiles();
     }
 }
 
 async function loadFiles() {
-    const res = await fetch('/files');
+    const res = await fetch("/files");
     const items = await res.json();
-    const ul = document.getElementById('files');
-    ul.innerHTML = '';
-    if (Array.isArray(items)) {
-        items.forEach(f => {
-            const li = document.createElement('li');
-            const a = document.createElement('a');
-            a.href = '/download/' + encodeURIComponent(f.name);
+    const ul = document.getElementById("files");
+    ul.innerHTML = "";
+    if (Array.isArray(items) && items.length) {
+        items.forEach(function (f) {
+            const li = document.createElement("li");
+            const a = document.createElement("a");
+            a.href = "/download/" + encodeURIComponent(f.name);
             a.textContent = f.name;
+            const size = document.createElement("span");
+            size.className = "size";
+            size.textContent = (f.size / 1024).toFixed(1) + " KB";
             li.appendChild(a);
-            li.append(` (${(f.size/1024).toFixed(1)} KB)`);
+            li.appendChild(size);
             ul.appendChild(li);
         });
+    } else {
+        ul.innerHTML = '<li class="empty">No files yet.</li>';
     }
 }
 
-document.getElementById('runBtn').addEventListener('click', startScraper);
-document.getElementById('refreshFiles').addEventListener('click', loadFiles);
+document.getElementById("runBtn").addEventListener("click", startScraper);
+document.getElementById("refreshFiles").addEventListener("click", loadFiles);
 
 loadCategories();
 loadFiles();
