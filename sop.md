@@ -1330,12 +1330,3 @@ Yes — fork the repo on GitHub, make changes, and submit a pull request.
 End of SOP
 
 For issues not covered here, check the terminal output — it usually tells you exactly what went wrong.
-
-Save this file as SOP.md in the root of your project folder (next to app.py). Then commit it to GitHub:
-
-powershell
-cd "C:\Users\defaultuser0\Downloads\GeM-Document-Scraper"
-git add SOP.md
-git commit -m "Add complete SOP documentation"
-git push
-Anyone who clones your repo will see this SOP alongside the code.
