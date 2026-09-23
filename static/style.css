@@ -1,0 +1,67 @@
+* { box-sizing: border-box; }
+body {
+    font-family: system-ui, -apple-system, Segoe UI, sans-serif;
+    background: #f0f4f8;
+    margin: 0;
+    padding: 20px;
+    color: #1f2937;
+}
+.container {
+    max-width: 900px;
+    margin: 0 auto;
+}
+h1 {
+    text-align: center;
+    color: #0b3d91;
+}
+.card {
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+label {
+    display: block;
+    margin-top: 12px;
+    font-weight: 600;
+    font-size: 14px;
+}
+input {
+    width: 100%;
+    padding: 10px;
+    margin-top: 4px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 14px;
+}
+button {
+    margin-top: 16px;
+    padding: 10px 20px;
+    background: #0b3d91;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 15px;
+    cursor: pointer;
+}
+button:hover { background: #082d6e; }
+small { color: #64748b; display: block; margin-top: 4px; }
+#log {
+    background: #0f172a;
+    color: #7dd3fc;
+    padding: 12px;
+    border-radius: 6px;
+    max-height: 300px;
+    overflow-y: auto;
+    font-size: 12px;
+    white-space: pre-wrap;
+}
+#files { list-style: none; padding: 0; }
+#files li {
+    padding: 6px 0;
+    border-bottom: 1px solid #e5e7eb;
+    font-size: 14px;
+}
+#files a { color: #0b3d91; text-decoration: none; }
+#files a:hover { text-decoration: underline; }

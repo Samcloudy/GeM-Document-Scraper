@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>GeM Document Scraper</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="container">
+    <h1>GeM Document Scraper</h1>
+
+    <div class="card">
+        <label>Category</label>
+        <input id="category" list="catlist" placeholder="Type to search...">
+        <datalist id="catlist"></datalist>
+        <small id="catstatus">Loading categories from GeM...</small>
+
+        <label>From date (DD-MM-YYYY)</label>
+        <input id="from_date" value="01-09-2026">
+
+        <label>To date (DD-MM-YYYY)</label>
+        <input id="to_date" value="05-09-2026">
+
+        <button id="runBtn">Run Scraper</button>
+        <div id="runstatus"></div>
+    </div>
+
+    <div class="card">
+        <h3>Progress</h3>
+        <div id="progress">0 / 0</div>
+        <pre id="log"></pre>
+    </div>
+
+    <div class="card">
+        <h3>Downloaded Files</h3>
+        <ul id="files"></ul>
+        <button id="refreshFiles">Refresh</button>
+    </div>
+</div>
+
+<script>
+async function loadCategories() {
+    const res = await fetch('/categories');
+    const data = await res.json();
+    const list = document.getElementById('catlist');
+    list.innerHTML = '';
+    if (Array.isArray(data)) {
+        data.forEach(c => {
+            const opt = document.createElement('option');
+            opt.value = c;
+            list.appendChild(opt);
+        });
+        document.getElementById('catstatus').textContent =
+            `${data.length} categories loaded. Type to search.`;
+    } else {
+        document.getElementById('catstatus').textContent =
+            'Could not load categories: ' + (data.error || 'unknown error');
+    }
+}
+
+async function startScraper() {
+    const category = document.getElementById('category').value.trim();
+    const from_date = document.getElementById('from_date').value.trim();
+    const to_date = document.getElementById('to_date').value.trim();
+    if (!category || !from_date || !to_date) {
+        alert('Please fill all fields');
+        return;
+    }
+    const res = await fetch('/start', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({category, from_date, to_date})
+    });
+    const data = await res.json();
+    if (data.error) {
+        alert(data.error);
+    } else {
+        document.getElementById('runstatus').textContent = 'Running...';
+        pollStatus();
+    }
+}
+
+async function pollStatus() {
+    const res = await fetch('/status');
+    const s = await res.json();
+    document.getElementById('log').textContent = s.log.join('\n');
+    document.getElementById('log').scrollTop = document.getElementById('log').scrollHeight;
+    document.getElementById('progress').textContent =
+        `${s.downloaded} / ${s.total}`;
+
+    if (s.error) {
+        document.getElementById('runstatus').textContent = 'Error: ' + s.error;
+    } else if (s.done) {
+        document.getElementById('runstatus').textContent = 'Finished!';
+    }
+
+    if (s.running) {
+        setTimeout(pollStatus, 1500);
+    } else {
+        loadFiles();
+    }
+}
+
+async function loadFiles() {
+    const res = await fetch('/files');
+    const items = await res.json();
+    const ul = document.getElementById('files');
+    ul.innerHTML = '';
+    if (Array.isArray(items)) {
+        items.forEach(f => {
+            const li = document.createElement('li');
+            const a = document.createElement('a');
+            a.href = '/download/' + encodeURIComponent(f.name);
+            a.textContent = f.name;
+            li.appendChild(a);
+            li.append(` (${(f.size/1024).toFixed(1)} KB)`);
+            ul.appendChild(li);
+        });
+    }
+}
+
+document.getElementById('runBtn').addEventListener('click', startScraper);
+document.getElementById('refreshFiles').addEventListener('click', loadFiles);
+
+loadCategories();
+loadFiles();
+</script>
+</body>
+</html>

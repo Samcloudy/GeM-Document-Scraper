@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+gem_downloads/
+captcha/
+chromedriver.exe
+chromedriver
+chromedriver-win64/
+.venv/
+venv/
+.vscode/
+.idea/
+*.log
